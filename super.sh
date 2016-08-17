@@ -151,8 +151,17 @@ data_dir="'/usr/local/squirrelmail/www/data/';"
 attachment_dir="'/usr/local/squirrelmail/www/attach/';"
 smtpServerAddress="'localhost';"
 imapServerAddress="'localhost';"
-
-
+#-----------------------------------------#
+#    __                     __   ______            ____
+#   / /   ____  _________ _/ /  / ____/___  ____  / __/
+#  / /   / __ \/ ___/ __ `/ /  / /   / __ \/ __ \/ /_  
+# / /___/ /_/ / /__/ /_/ / /  / /___/ /_/ / / / / __/  
+#/_____/\____/\___/\__,_/_/   \____/\____/_/ /_/_/ 
+#-----------------------------------------#
+if [ -s super.local ]; then
+    #final, more fussy, read of above above overrides
+    source super.local || exit $?;	#die on trouble in script
+fi
 #-----------------------------------------#
 #   ___  __      ___     _        _ _     
 #  /___\/ _\    /   \___| |_ __ _(_) |___ 
@@ -160,7 +169,6 @@ imapServerAddress="'localhost';"
 #/ \_// _\ \  / /_//  __/ || (_| | | \__ \
 #\___/  \__/ /___,' \___|\__\__,_|_|_|___/                        
 #-----------------------------------------#
-
 if [ "$(which yum)" != "" ]; then
     echo "OS uses Yum"
     package_manager="yum"
@@ -177,8 +185,6 @@ elif [ "$(which apt-get)" != "" ]; then
     package_manager="apt-get"
 
 fi
-
-[ -s super.local ] & source super.local;  #final read read of above local defs
 
 #-----------------------------------------#
 # __           _       _   
