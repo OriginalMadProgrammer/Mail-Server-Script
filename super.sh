@@ -20,6 +20,10 @@ set -a
 virtual_mailbox_domains="example.com" #Include all domains here, format: "example.com another.com"
 default_password="admin"
 ##
+
+#  NOTE: rather than chaning local files put overrides into super.local file
+[ -s super.local ] & source super.local;  #preliminary read of above local defs
+
 #Additional Subsitutions
 mydomain="$(echo $virtual_mailbox_domains | awk '{print $1}')" #ONLY FIRST DOMAIN USED FOR HTTPS CERT
 myhostname="mail.$mydomain"
@@ -120,7 +124,7 @@ sa_tag_level_deflt="-9999"
 sa_tag2_level_deflt=5
 required_score=5
 #Disable virus scanning.  (Companies with Windows clients may want to re-enable virus scanning.  Requires more AWS resources at high volume):
-@bypass_virus_checks_maps = (1);
+#bypass_virus_checks_maps = (1);
 required_hits=5
 report_safe=0
 rewrite_header=""
@@ -173,6 +177,9 @@ elif [ "$(which apt-get)" != "" ]; then
     package_manager="apt-get"
 
 fi
+
+[ -s super.local ] & source super.local;  #final read read of above local defs
+
 #-----------------------------------------#
 # __           _       _   
 #/ _\ ___ _ __(_)_ __ | |_ 
