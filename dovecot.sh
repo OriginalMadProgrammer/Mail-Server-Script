@@ -3,10 +3,17 @@
 #-----------------------------------------#
 ###Welcome to the dovecot setup script. Any variables that may need to be adjusted should be changed in the designated "variables" section in the main script. Some non variable file writes should be changed in this file if necessary though.
 #-----------------------------------------#
+echo "@@ Doing dovecot $1";
+# allow "--preinstall" to just preinstall packages.
+# follow with "--config" later on to actually install them
+if [ "${1:-}" != "--config" ]; then
 
-sudo $package_manager install dovecot dovecot-pigeonhole dovecot-pgsql -y
+    sudo $package_manager install dovecot dovecot-pigeonhole dovecot-pgsql -y || exit $?
 
-status="$(ps ax | grep -v grep | grep dovecot)"
+    if [ "${1:-}" = "--preinstall" ]; then exit 0; fi;
+fi
+
+status="$(ps ax | grep '[d]ovecot')"
 
 if [ "$status" = "" ]; then
 

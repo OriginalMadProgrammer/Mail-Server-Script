@@ -3,8 +3,15 @@
 #-----------------------------------------#
 ###Welcome to the apache setup script. Any variables that may need to be adjusted should be changed in the designated "variables" section in the main script.
 #-----------------------------------------#
+echo "@@ Doing apache ${1:-}";
 
-sudo $package_manager install httpd mod_ssl -y
+if [ "${1:-}" != "--config" ]; then
+
+    sudo $package_manager install httpd mod_ssl -y || exit $?
+
+    if [ "${1:-}" = "--preinstall" ]; then exit 0; fi;
+fi
+
 
 httpd_secure=(SSLCertificateFile SSLCertificateKeyFile SSLProtocol)
 

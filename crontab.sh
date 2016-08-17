@@ -3,8 +3,15 @@
 #-----------------------------------------#
 ###Welcome to the crontab setup script. 
 #-----------------------------------------#
+echo "@@ Doing crontab";
 
-sudo $package_manager install cronie -y
+if [ "${1:-}" != "--config" ]; then
+
+    sudo $package_manager install cronie -y || exit $?
+
+    if [ "${1:-}" = "--preinstall" ]; then exit 0; fi;
+fi
+
 
 sudo crontab -u amavis -r
 

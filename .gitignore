@@ -2,3 +2,5 @@
 # local configuration from user that is NOT to be lost on upgrades
 # nor accidently publically comitted to github.
 super.local
+
+.*.swp

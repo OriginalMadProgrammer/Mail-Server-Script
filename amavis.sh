@@ -3,16 +3,22 @@
 #-----------------------------------------#
 ###Welcome to the Amavis / Clamav / Spamassassin setup script. Any variables that may need to be adjusted should be changed in the designated "variables" section in the main script. Some non variable file writes should be changed in this file if necessary though.
 #-----------------------------------------#
+echo "@@ Doing amavis ${1:-}";
 
-if [ "$package_manager" = "yum" ]; then
+if [ "${1:-}" != "--config" ]; then
 
-sudo rpm -Uvh http://apt.sw.be/redhat/el6/en/x86_64/rpmforge/RPMS/rpmforge-release-0.5.2-2.el6.rf.x86_64.rpm
+    if [ "$package_manager" = "yum" ]; then
 
+	sudo rpm -Uvh http://apt.sw.be/redhat/el6/en/x86_64/rpmforge/RPMS/rpmforge-release-0.5.2-2.el6.rf.x86_64.rpm || exit $?
+
+    fi
+
+    sudo $package_manager install amavisd-new clamd perl-IO-Socket-INET6 -y || exit $?
+
+    sudo $package_manager install perl-Razor-Agent perl-DBD-Pg -y || exit $?
+
+    if [ "${1:-}" = "--preinstall" ]; then exit 0; fi;
 fi
-
-sudo $package_manager install amavisd-new clamd perl-IO-Socket-INET6 -y
-
-sudo $package_manager install perl-Razor-Agent perl-DBD-Pg -y
 
 
 start_tag="####CURRENT BUILD !!!! LEAVE THIS TAG LINE INTACT IF YOU PLAN TO EVER USE THE SETUP SCRIPT AGAIN OR BE READY TO REINSTALL DOVECOT... DO NOT REMOVE####"

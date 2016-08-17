@@ -4,8 +4,15 @@
 ###Welcome to the pgsql setup script. Any variables that may need to be adjusted should be changed in the designated "variables" section in the main script
 #-----------------------------------------#
 #First every postgresql element must be installed
+echo "@@ Doing pgsql ${1:-}";
 
-sudo yum install postgresql postgresql-server postgresql-devel postgresql-contrib postgresql-docs postgresql-server postgresql-libs -y
+if [ "${1:-}" != "--config" ]; then
+
+    sudo yum install postgresql postgresql-server postgresql-devel postgresql-contrib postgresql-docs postgresql-server postgresql-libs -y || exit $?
+
+    if [ "${1:-}" = "--preinstall" ]; then exit 0; fi;
+fi
+
 
 #Initialize the database so that we have something to work with
 

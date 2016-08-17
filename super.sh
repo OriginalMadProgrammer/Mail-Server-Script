@@ -4,6 +4,21 @@
 ###Welcome to the main setup script. Here you will be able to adjust crucial variables
 # for each section as well as see which files executed and when.
 #-----------------------------------------#
+#    __                      _            
+#   / /   ____  ____ _____ _(_)___  ____ _
+#  / /   / __ \/ __ `/ __ `/ / __ \/ __ `/
+# / /___/ /_/ / /_/ / /_/ / / / / / /_/ / 
+#/_____/\____/\__, /\__, /_/_/ /_/\__, /  
+#            /____//____/        /____/   
+#-----------------------------------------#
+if [ "${1:-}" = "--log" ]; then
+    shift;
+    set -o pipefail;
+    log="super-$(date '+%H%M').log";
+    $0 "$@" | cat -n | tee "$log";
+    exit $?;
+fi
+#-----------------------------------------#
 #                 _       _     _  
 #/\   /\__ _ _ __(_) __ _| |__ | | ___  ___ 
 #\ \ / / _` | '__| |/ _` | '_ \| |/ _ \/ __|
@@ -152,17 +167,6 @@ attachment_dir="'/usr/local/squirrelmail/www/attach/';"
 smtpServerAddress="'localhost';"
 imapServerAddress="'localhost';"
 #-----------------------------------------#
-#    __                     __   ______            ____
-#   / /   ____  _________ _/ /  / ____/___  ____  / __/
-#  / /   / __ \/ ___/ __ `/ /  / /   / __ \/ __ \/ /_  
-# / /___/ /_/ / /__/ /_/ / /  / /___/ /_/ / / / / __/  
-#/_____/\____/\___/\__,_/_/   \____/\____/_/ /_/_/ 
-#-----------------------------------------#
-if [ -s super.local ]; then
-    #final, more fussy, read of above above overrides
-    source super.local || exit $?;	#die on trouble in script
-fi
-#-----------------------------------------#
 #   ___  __      ___     _        _ _     
 #  /___\/ _\    /   \___| |_ __ _(_) |___ 
 # //  //\ \    / /\ / _ \ __/ _` | | / __|
@@ -185,7 +189,17 @@ elif [ "$(which apt-get)" != "" ]; then
     package_manager="apt-get"
 
 fi
-
+#-----------------------------------------#
+#    __                     __   ______            ____
+#   / /   ____  _________ _/ /  / ____/___  ____  / __/
+#  / /   / __ \/ ___/ __ `/ /  / /   / __ \/ __ \/ /_  
+# / /___/ /_/ / /__/ /_/ / /  / /___/ /_/ / / / / __/  
+#/_____/\____/\___/\__,_/_/   \____/\____/_/ /_/_/ 
+#-----------------------------------------#
+if [ -s super.local ]; then
+    #final, more fussy, read of above above overrides
+    source super.local || exit $?;	#die on trouble in script
+fi
 #-----------------------------------------#
 # __           _       _   
 #/ _\ ___ _ __(_)_ __ | |_ 
@@ -195,6 +209,47 @@ fi
 #               |_| 
 #-----------------------------------------#
 echo "Starting main setup"
+
+if ! id | grep 'uid=0(root)'; then
+	echo "User is not root. use sudo ./super.sh";
+	###exit 1;
+fi
+
+PS4='[$LINENO]+ '; set -x;
+install_list=( 
+	dovecot.sh 
+	pgsql.sh
+	amavis.sh 
+	apache.sh
+	crontab.sh
+	"squirrelmail.sh=-d /usr/local/squirrelmail/www"
+	    );
+function do_list
+{
+    set -x;
+    for il in "${install_list[@]}"; do
+	sh="${il%%=*}";		#script
+	t="${il#*.sh}";		#test, with leading =
+	if [[ "$t" == "=-"* ]]; then
+	    if eval "[ ${t#=} ]"; then 
+	        echo "@@skip $sh";
+		continue;
+	    fi
+	fi
+	echo "@@doing $sh";
+	echo ZZZ ./$sh "${1:-}";
+	echo "@@done $sh";
+    done
+}
+do_list_args=();	#suppose standard install
+if [ "${1:-}" = "--preinstall" ]; then
+    # --preinstall -- likely developer testing things
+    do_list "--preinstall" || exit $?;
+    do_list_args=( "--config" );  #skip --preinstall
+fi
+echo 9999999999999999999 >&2; exit 99;
+
+
 
 sudo $package_manager update -y
 
@@ -218,21 +273,7 @@ fi
 sudo groupadd -g 12 mail
 sudo useradd -g mail -u 200 -d /mnt/vmail -s /sbin/nologin mailreader
 
-./dovecot.sh 
-
-./pgsql.sh
-
-./amavis.sh 
-
-./apache.sh
-
-./crontab.sh
-
-if ! [ -d /usr/local/squirrelmail/www ]; then
-
-./squirrelmail.sh
-
-fi
+do_list "${do_list_args[@]}";
 
 sudo service dovecot restart
 sudo service postfix restart
