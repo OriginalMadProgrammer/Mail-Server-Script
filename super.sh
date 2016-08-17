@@ -22,7 +22,7 @@ default_password="admin"
 ##
 
 #  NOTE: rather than chaning local files put overrides into super.local file
-[ -s super.local ] & source super.local;  #preliminary read of above local defs
+[ -s super.local ] && source super.local;  #preliminary read of above local defs
 
 #Additional Subsitutions
 mydomain="$(echo $virtual_mailbox_domains | awk '{print $1}')" #ONLY FIRST DOMAIN USED FOR HTTPS CERT
