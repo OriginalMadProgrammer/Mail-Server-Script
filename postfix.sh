@@ -37,8 +37,17 @@ then
 
 else
     echo "postfix is installed, continue."
-
 fi
+
+
+# allow "--preinstall" to just preinstall packages.
+# follow with "--config" later on to actually install them
+if [ "${1:-}" != "--config" ]; then
+
+    sudo yum install cyrus-sasl-plain -y
+    if [ "${1:-}" = "--preinstall" ]; then exit 0; fi;
+fi
+
 
 #Stop Postfix if it is runing
 
@@ -60,8 +69,6 @@ else
     exit
 
 fi
-
-sudo yum install cyrus-sasl-plain -y
 
 status="$(ps ax | grep -v grep | grep saslauthd)"
 

@@ -223,8 +223,13 @@ if ! id | grep 'uid=0(root)'; then
 	###exit 1;
 fi
 
-PS4='[$LINENO]+ '; set -x;
+#Sub-script run order is final and should not be adjusted. 
+# # In addition, subscripts should ONLY BE LAUNCHED FROM super.sh as
+#   there are many variable dependencies. 
+# # Comment sub-scripts out if you don't want to run them again, 
+#   but only do so after running everything at least once.
 install_list=( 
+	postfix.sh	#done as special case BEFORE main loop
 	dovecot.sh 
 	pgsql.sh
 	amavis.sh 
@@ -232,56 +237,72 @@ install_list=(
 	crontab.sh
 	"squirrelmail.sh=-d /usr/local/squirrelmail/www"
 	    );
+function do_script
+{
+    typeset il="$1"; shift;		#get simple name
+    typeset sh="${il%%=*}";		#script
+    typeset t="${il#*.sh}";		#test, with leading =
+    if [[ "$t" == "=-"* ]]; then
+    	#test conditional present... make it
+	if eval "[ ${t#=} ]"; then 
+	    echo "@@skip $sh";
+	    continue;
+	fi
+    fi
+    echo "@@doing $sh";
+    ./$sh "$@";
+    echo "@@done $sh";
+
+}
 function do_list
 {
-    set -x;
     for il in "${install_list[@]}"; do
-	sh="${il%%=*}";		#script
-	t="${il#*.sh}";		#test, with leading =
-	if [[ "$t" == "=-"* ]]; then
-	    if eval "[ ${t#=} ]"; then 
-	        echo "@@skip $sh";
-		continue;
+	${safe}do_script "$il" "$@"
+	case "$il" in
+	  (postfix.sh)
+	    status="$(ps ax | grep -v grep | grep postfix)"
+
+	    if [ "$status" = "" ]; then 
+		echo "Postfix failed to start... stopping ${0##*/} script."
+		${safe}exit 1
+	    else
+		echo "Postfix up and running"
 	    fi
-	fi
-	echo "@@doing $sh";
-	echo ZZZ ./$sh "${1:-}";
-	echo "@@done $sh";
+	    ;;
+	esac
     done
 }
+
+if [ -w / ]; then
+    # root user... update packages 
+    safe="";		#user root lives dangerously
+
+    sudo $package_manager update -y
+
+    sudo ./perl-find-replace "$(grep HOSTNAME $network_file)" "HOSTNAME=\"$myhostname\"" $network_file 
+
+    #Add a mail group and mailreader user
+    sudo groupadd -g 12 mail
+    sudo useradd -g mail -u 200 -d /mnt/vmail -s /sbin/nologin mailreader
+else
+    echo "NOT ROOT: developer testing in safe mode"
+    safe="echo SAFE...";	#debugging trace
+fi
+
 do_list_args=();	#suppose standard install
 if [ "${1:-}" = "--preinstall" ]; then
     # --preinstall -- likely developer testing things
     do_list "--preinstall" || exit $?;
     do_list_args=( "--config" );  #skip --preinstall
 fi
-echo 9999999999999999999 >&2; exit 99;
-
-
-
-sudo $package_manager update -y
-
-sudo ./perl-find-replace "$(grep HOSTNAME $network_file)" "HOSTNAME=\"$myhostname\"" $network_file 
- 
-#Sub-script run order is final and should not be adjusted. In addition, subscripts should ONLY BE LAUNCHED FROM super.sh- there are many variable dependencies. Comment sub-scripts out if you don't want to run them again, but only do so after running everything at least once.
-
-./postfix.sh
-
-status="$(ps ax | grep -v grep | grep postfix)"
-
-if [ "$status" = "" ]; then 
-    echo "Postfix failed to start... stopping script."
-    exit 1
-else
-    echo "Postfix up and running"
+if ${safe}false; then
+    echo "SAFE MODE EXIT";
+    exit 0;
 fi
 
-#Add a mail group and mailreader user
-
-sudo groupadd -g 12 mail
-sudo useradd -g mail -u 200 -d /mnt/vmail -s /sbin/nologin mailreader
-
 do_list "${do_list_args[@]}";
+
+echo 9999999999999999999 >&2; exit 99;
 
 sudo service dovecot restart
 sudo service postfix restart
