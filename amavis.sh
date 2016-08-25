@@ -9,11 +9,17 @@ if [ "${1:-}" != "--config" ]; then
 
     if [ "$package_manager" = "yum" ]; then
 
-	sudo rpm -Uvh http://apt.sw.be/redhat/el6/en/x86_64/rpmforge/RPMS/rpmforge-release-0.5.2-2.el6.rf.x86_64.rpm || exit $?
-
+        # ?? http://superuser.com/questions/573816/how-do-i-configure-yum-to-use-additional-repositories
+  	# ?? Add key for the repository
+	
+	sudo rpm -Uvh "$amavis_url" || exit $?
     fi
+    # https://forums.aws.amazon.com/thread.jspa?threadID=189216
+    sudo $package_manager install amavisd-new 
 
-    sudo $package_manager install amavisd-new clamd perl-IO-Socket-INET6 -y || exit $?
+    # curl -O "http://www.ijs.si/software/amavisd/amavisd-new-$amavis_v.tar.gz" 
+
+    sudo $package_manager install clamd perl-IO-Socket-INET6 -y || exit $?
 
     sudo $package_manager install perl-Razor-Agent perl-DBD-Pg -y || exit $?
 
