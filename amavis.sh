@@ -7,11 +7,12 @@ echo "@@ Doing amavis ${1:-}";
 
 if [ "${1:-}" != "--config" ]; then
 
-    if [ "$package_manager" = "yum" ]; then
+    if [ "$package_manager" = "yum" ] && 
+       [ "$rpmforge_v" != "" ]; then
 	sudo rpm -Uvh "$rpmforge_url" || exit $?
     fi
     # https://forums.aws.amazon.com/thread.jspa?threadID=189216
-    sudo $package_manager install amavisd-new 
+    sudo $package_manager install amavisd-new  || exit $?
 
     sudo $package_manager install clamd perl-IO-Socket-INET6 -y || exit $?
 

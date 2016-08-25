@@ -78,12 +78,12 @@ message_size_limit=0
 
 ###Taking Care of SPAM and VIRUSES:                                             
 
-# historic, now defunct, details
+# historic, defunct, rpmforge
 rpmforge_v=0.5.2-2
 rpmforge_url=http://apt.sw.be/redhat/el6/en/x86_64/rpmforge/RPMS/rpmforge-release-$rpmforge_v.el6.rf.x86_64.rpm
 
-# 2016-08 try
-rpmforge_v=0.5.3-1
+# 2016-08 try repoforge instead
+rpmforge_v="";		#don't require under epel-testingepel-testing
 rpmforge_url=http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-$rpmforge_v.el6.rf.x86_64.rpm
 
 content_filter=smtp-amavis:[127.0.0.1]:10024
@@ -195,8 +195,44 @@ if [ "$(which yum)" != "" ]; then
 elif [ "$(which apt-get)" != "" ]; then
     echo "OS uses Apt-get"
     package_manager="apt-get"
-
 fi
+
+#assure appropriate repositories enabled
+if [ -w / ]; then
+    safe="";		#user root lives dangerously
+else
+    echo "NOT ROOT: developer testing in safe mode"
+    safe="echo SAFE...";	#debugging trace
+fi
+trouble=false;
+if [ "$rpmforge_v" == "" ]; then
+    #pulling amavisd-new from EPEL repository... we hope
+    if ! repoquery -i amavisd-new 2>/dev/null; then
+        #not available in repo... look in more detail to help poor user
+	for r in epel epel-testing; do
+	    f="/etc/yum.repos.d/$r.repo";
+	    if [ ! -f "$f" ]; then
+		echo "Missing repository $r file $f";
+		${safe}trouble=true; 	#don't die if testing on Debian
+	    else
+		# not thrilled about automatically enabling the repositories...
+		#  kind of like forcing user to enable so they can disable
+		#  afterwards if they don't want to leave it enabled,
+		#  especially "testing".
+		if ! awk -vr=epel '
+		    BEGIN	  {xit=3;}
+		    /^\[.*\]/ { go=match($0, "^[[]"r"[]]"); 
+				if ( go >= 1 ) print $0}
+		    /^enabled=1/{if ( go ) xit=0}
+		    END{exit xit}' "$f"; then
+		     echo "Repository $r not enabled in $f";
+		fi
+	    fi
+	done
+    fi
+fi
+$trouble && exit 23;
+
 #-----------------------------------------#
 #    __                     __   ______            ____
 #   / /   ____  _________ _/ /  / ____/___  ____  / __/
@@ -273,10 +309,8 @@ function do_list
     done
 }
 
-if [ -w / ]; then
+if [ "$safe" = "" ]; then
     # root user... update packages 
-    safe="";		#user root lives dangerously
-
     sudo $package_manager update -y
 
     sudo ./perl-find-replace "$(grep HOSTNAME $network_file)" "HOSTNAME=\"$myhostname\"" $network_file 
@@ -284,9 +318,6 @@ if [ -w / ]; then
     #Add a mail group and mailreader user
     sudo groupadd -g 12 mail
     sudo useradd -g mail -u 200 -d /mnt/vmail -s /sbin/nologin mailreader
-else
-    echo "NOT ROOT: developer testing in safe mode"
-    safe="echo SAFE...";	#debugging trace
 fi
 
 do_list_args=();	#suppose standard install
