@@ -79,12 +79,12 @@ message_size_limit=0
 ###Taking Care of SPAM and VIRUSES:                                             
 
 # historic, now defunct, details
-amavis_v=0.5.2-2
-amavis_url=http://apt.sw.be/redhat/el6/en/x86_64/rpmforge/RPMS/rpmforge-release-$amavis_v.el6.rf.x86_64.rpm
+rpmforge_v=0.5.2-2
+rpmforge_url=http://apt.sw.be/redhat/el6/en/x86_64/rpmforge/RPMS/rpmforge-release-$rpmforge_v.el6.rf.x86_64.rpm
 
 # 2016-08 try
-amavis_v=0.5.3-1
-amavis_url=http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-$amavis_v.el6.rf.x86_64.rpm
+rpmforge_v=0.5.3-1
+rpmforge_url=http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-$rpmforge_v.el6.rf.x86_64.rpm
 
 content_filter=smtp-amavis:[127.0.0.1]:10024
 

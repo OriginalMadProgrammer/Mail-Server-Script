@@ -8,16 +8,10 @@ echo "@@ Doing amavis ${1:-}";
 if [ "${1:-}" != "--config" ]; then
 
     if [ "$package_manager" = "yum" ]; then
-
-        # ?? http://superuser.com/questions/573816/how-do-i-configure-yum-to-use-additional-repositories
-  	# ?? Add key for the repository
-	
-	sudo rpm -Uvh "$amavis_url" || exit $?
+	sudo rpm -Uvh "$rpmforge_url" || exit $?
     fi
     # https://forums.aws.amazon.com/thread.jspa?threadID=189216
     sudo $package_manager install amavisd-new 
-
-    # curl -O "http://www.ijs.si/software/amavisd/amavisd-new-$amavis_v.tar.gz" 
 
     sudo $package_manager install clamd perl-IO-Socket-INET6 -y || exit $?
 
