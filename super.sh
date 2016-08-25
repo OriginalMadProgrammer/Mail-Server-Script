@@ -1,20 +1,50 @@
-#!/bin/bash
-# Todo: sa-update via cron.
+#!/bin/bash # Todo: sa-update via cron.
 #-----------------------------------------#
 ###Welcome to the main setup script. Here you will be able to adjust crucial variables
-# for each section as well as see which files executed and when.
+# in the "Variables" section for each section as well as see which files executed and when.
 #-----------------------------------------#
-#    __                      _            
-#   / /   ____  ____ _____ _(_)___  ____ _
-#  / /   / __ \/ __ `/ __ `/ / __ \/ __ `/
-# / /___/ /_/ / /_/ / /_/ / / / / / /_/ / 
-#/_____/\____/\__, /\__, /_/_/ /_/\__, /  
-#            /____//____/        /____/   
+#   ___         _    _                
+#  / _ \  _ __ | |_ (_) ___  _ _   ___
+# | (_) || '_ \|  _|| |/ _ \| ' \ (_-<
+#  \___/ | .__/ \__||_|\___/|_||_|/__/
+#        |_|                          
 #-----------------------------------------#
-if [ "${1:-}" = "--log" ]; then
-    shift;
+opt_dry=false;		#true for test mode
+opt_xearly=false;	#true for test mode
+opt_log=false;		#true to write log file
+opt_mode=".";		#. for normal, preinstall, config
+trouble=false;		#true for fatal exit
+while [ $# -ge 1 ] && [[ "$1" == -* ]]; do
+    opt="$1";
+    case "$opt" in
+      (--log=*)	     opt_log=true;;
+      (--preinstall) opt_mode="$1";;
+      (--)	     break;;
+
+      # internal unpublished/unsupported options 
+      (---dry) 	     opt_dry=true;;
+      (---xearly)    opt_xearly=true;;
+
+      (*)	     echo >&2 "Unknown option $opt";
+      		     trouble=true;;
+    esac;
+done
+unset opt;
+
+$opt_dry && safe="echo DRY..." || safe="";
+
+#-----------------------------------------#
+#  _                      _             
+# | |    ___  __ _  __ _ (_) _ _   __ _ 
+# | |__ / _ \/ _` |/ _` || || ' \ / _` |
+# |____|\___/\__, |\__, ||_||_||_|\__, |
+#            |___/ |___/          |___/ 
+#-----------------------------------------#
+if $opt_log;  then
     set -o pipefail;
-    log="super-$(date '+%H%M').log";
+    log="../super-$(date '+%Y%m%d.%H%M').log";
+    	# write to .. so grepping local source does not
+	# come up with false hits in log in ".".
     $0 "$@" | cat -n | tee "$log";
     exit $?;
 fi
@@ -36,8 +66,9 @@ virtual_mailbox_domains="example.com" #Include all domains here, format: "exampl
 default_password="admin"
 ##
 
-#  NOTE: rather than chaning local files put overrides into super.local file
-[ -s super.local ] && source super.local;  #preliminary read of above local defs
+#  NOTE: rather than changing local files put overrides into optional super.local file
+[ -s ./super.local ] && ./source super.local;
+#  preliminary read of above local defs.. final read follows.
 
 #Additional Subsitutions
 mydomain="$(echo $virtual_mailbox_domains | awk '{print $1}')" #ONLY FIRST DOMAIN USED FOR HTTPS CERT
@@ -198,51 +229,33 @@ elif [ "$(which apt-get)" != "" ]; then
 fi
 
 #assure appropriate repositories enabled
-if [ -w / ]; then
-    safe="";		#user root lives dangerously
-else
+if [ ! -w / ]; then
     echo "NOT ROOT: developer testing in safe mode"
-    safe="echo SAFE...";	#debugging trace
+    echo "User is not root. use sudo ./super.sh";
 fi
-trouble=false;
+
+# suspect following "if rpmforge_v" can go away... but not quite yet
 if [ "$rpmforge_v" == "" ]; then
     #pulling amavisd-new from EPEL repository... we hope
-    if ! repoquery -i amavisd-new 2>/dev/null; then
-        #not available in repo... look in more detail to help poor user
-	for r in epel epel-testing; do
-	    f="/etc/yum.repos.d/$r.repo";
-	    if [ ! -f "$f" ]; then
-		echo "Missing repository $r file $f";
-		${safe}trouble=true; 	#don't die if testing on Debian
-	    else
-		# not thrilled about automatically enabling the repositories...
-		#  kind of like forcing user to enable so they can disable
-		#  afterwards if they don't want to leave it enabled,
-		#  especially "testing".
-		if ! awk -vr=epel '
-		    BEGIN	  {xit=3;}
-		    /^\[.*\]/ { go=match($0, "^[[]"r"[]]"); 
-				if ( go >= 1 ) print $0}
-		    /^enabled=1/{if ( go ) xit=0}
-		    END{exit xit}' "$f"; then
-		     echo "Repository $r not enabled in $f";
-		fi
-	    fi
-	done
+    if ! repoquery -i amavisd-new >/dev/null 2>&1; then
+	echo >&2 "ERROR: amavisd-new NOT available in repositories";
+	echo >&2 "Be sure in /etc/yum.repos.d/epel*.repo the";
+	echo >&2 "[epel] and [epel-testing] sections have enabled=1";
+	echo >&2 "You may want to set these OFF after system working.";
+	trouble=true;
     fi
 fi
-$trouble && exit 23;
 
 #-----------------------------------------#
-#    __                     __   ______            ____
-#   / /   ____  _________ _/ /  / ____/___  ____  / __/
-#  / /   / __ \/ ___/ __ `/ /  / /   / __ \/ __ \/ /_  
-# / /___/ /_/ / /__/ /_/ / /  / /___/ /_/ / / / / __/  
-#/_____/\____/\___/\__,_/_/   \____/\____/_/ /_/_/ 
+#  _                    _  __   __              
+# | |    ___  __  __ _ | | \ \ / /__ _  _ _  ___
+# | |__ / _ \/ _|/ _` || |  \ V // _` || '_|(_-<
+# |____|\___/\__|\__,_||_|   \_/ \__,_||_|  /__/
+#                                               
 #-----------------------------------------#
-if [ -s super.local ]; then
-    #final, more fussy, read of above above overrides
-    source super.local || exit $?;	#die on trouble in script
+if [ -s ./super.local ]; then
+    #final, more fussy, overrides of ALL above variables
+    source ./super.local || exit $?;	#die on trouble in file
 fi
 #-----------------------------------------#
 # __           _       _   
@@ -252,12 +265,10 @@ fi
 #\__/\___|_|  |_| .__/ \__|
 #               |_| 
 #-----------------------------------------#
-echo "Starting main setup"
 
-if ! id | grep 'uid=0(root)'; then
-	echo "User is not root. use sudo ./super.sh";
-	###exit 1;
-fi
+$trouble && exit 23;
+
+echo "Starting main setup"
 
 #Sub-script run order is final and should not be adjusted. 
 # # In addition, subscripts should ONLY BE LAUNCHED FROM super.sh as
@@ -265,7 +276,7 @@ fi
 # # Comment sub-scripts out if you don't want to run them again, 
 #   but only do so after running everything at least once.
 install_list=( 
-	postfix.sh	#done as special case BEFORE main loop
+	postfix.sh
 	dovecot.sh 
 	pgsql.sh
 	amavis.sh 
@@ -309,7 +320,7 @@ function do_list
     done
 }
 
-if [ "$safe" = "" ]; then
+if ! $opt_dry; then
     # root user... update packages 
     sudo $package_manager update -y
 
@@ -321,19 +332,23 @@ if [ "$safe" = "" ]; then
 fi
 
 do_list_args=();	#suppose standard install
-if [ "${1:-}" = "--preinstall" ]; then
+if [ "$opt_mode" = "--preinstall" ]; then
     # --preinstall -- likely developer testing things
     do_list "--preinstall" || exit $?;
     do_list_args=( "--config" );  #skip --preinstall
 fi
 if ${safe}false; then
-    echo "SAFE MODE EXIT";
+    # dry mode not supported beyond this point
+    echo "DRY MODE EXIT";
     exit 0;
 fi
 
-do_list "${do_list_args[@]}";
+if $opt_xearly; then
+    echo EARLY EXIT >&2; 
+    exit 99;
+fi
 
-echo 9999999999999999999 >&2; exit 99;
+do_list "${do_list_args[@]}";
 
 sudo service dovecot restart
 sudo service postfix restart
